@@ -1,7 +1,8 @@
-# bot.py
+# splasher for github
 import mysql.connector
 import os
 import discord
+
 
 production = False       # test or production database connections and ENV
 dropall = False          # drop tables - testing and first time only
