@@ -1,8 +1,7 @@
-# splasher for github
+# bot.py
 import mysql.connector
 import os
 import discord
-
 
 production = False       # test or production database connections and ENV
 dropall = False          # drop tables - testing and first time only
@@ -10,19 +9,19 @@ createtest = False       # test data
 
 if production:
     mydb = mysql.connector.connect(
-      host="xxxxx",
-      user="yyy",
-      passwd="zzzz",
-      database = "xxxxxxccc"
+      host="efis.com",
+      user="i",
+      passwd="SP",
+      database = "eDB"
     )
-    TOKEN = "MjY4OTk3NjQz"
-    GUILD = "Splashes"
+    TOKEN = "NzEaVA20"
+    GUILD = "Spted"
 else:
     mydb = mysql.connector.connect(
       host="localhost",
-      user="clive",
-      passwd="SPOOKERU",
-      database = "DBOTDB"
+      user="ce",
+      passwd="SU",
+      database = "DB"
     )
 
     from dotenv import load_dotenv
@@ -173,7 +172,7 @@ async def on_message(message):
         if len(parameters) == 2:
             numbertoshow = parameters [1]
         else:
-            numbertoshow = str(0)
+            numbertoshow = str(1)
 # Help command
 
     if usercommand == '!rh':
@@ -182,7 +181,7 @@ async def on_message(message):
         footer = str(message.guild.member_count) + " users in guild"
         retstr1 = str("""```yaml\nCurrently there are 3 commands you can issue ```""")
         retstr2 = str("""```\n'!r @username #Value' - vote 1-5```""")
-        retstr3 = str("""```\n'!rt' - Show the highest ranking splashers```""")
+        retstr3 = str("""```\n'!rt n' - Show the highest ranking splashers, 10 at a time, n = page number```""")
         retstr4 = str("""```\n'!rh' - this help ```""")
 
         allstr = retstr1 + retstr2 + retstr3 + retstr4
@@ -197,19 +196,26 @@ async def on_message(message):
 # try a code block - but its not working or its not a code block?
     if usercommand == '!rt':
         print('rt command')
-        try:
-            mydb.ping()
-        except:
-            print("trying to reconnect to SQL server")
-            mydb.connect()
 
         if not (numbertoshow.isdecimal()):
             #            print("opps invalid ranking value - must be numeric")
             thankuser = "opps invalid number to display - must be numeric"
             await message.channel.send(thankuser)
             return
-        nnumbertoshow = int(numbertoshow) * 10
-        nnumbertoend = nnumbertoshow + 9
+        try:
+            mydb.ping()
+        except:
+            print("trying to reconnect to SQL server")
+            mydb.connect()
+
+        # In case they passed a ZERO always show page 1
+        nnumbertoshow = int(numbertoshow)
+        if nnumbertoshow == 0:
+            nnumbertoshow = 1
+
+        pagesize = int(10)
+        nnumbertoshow = (nnumbertoshow - 1) * pagesize
+        nnumbertoend = nnumbertoshow + pagesize
 
         mycursor = mydb.cursor(buffered=True)
         sql = "SELECT * FROM users WHERE myscore > 0 ORDER BY myscore DESC"
@@ -224,7 +230,9 @@ async def on_message(message):
         numbershown = int(0)
         for x in results:
 # XXXX should be 10 to show at a time....
-            if numbershown >= nnumbertoshow and numbershown <= nnumbertoend:
+#            print(numbershown, nnumbertoshow, nnumbertoend)
+
+            if numbershown >= nnumbertoshow and numbershown < nnumbertoend:
                 foundany = True
                 fresponse = x[1]
                 # pad the answer to 20 chars so it formats correctly for the user
@@ -241,7 +249,7 @@ async def on_message(message):
 
         if foundany == False:
             retstr = retstr + "No users found in that range\n"
-            retstr = retstr + str(nnumbertoshow) + " - " + str(nnumbertoshow+9) + "\n"
+            retstr = retstr + str(nnumbertoshow) + " - " + str(nnumbertoend) + "\n"
 
         footer = str(message.guild.member_count) + " users in guild"
         retstr = retstr + str(""" ```""")
@@ -512,13 +520,17 @@ async def on_message(message):
          embed.set_footer(text=footer)
          embed.set_thumbnail(
              url="https://cdn.dribbble.com/users/429762/screenshots/1804795/potion_dribbble_800_600.png")
+         await message.channel.send(embed=embed)
 
 # Tell the user we voted for them
          thankuser = myname + " voted for you - " + ranking
          user = client.get_user(memberid)
-         await user.send(thankuser)
+# Try this as smoe users we cannot send to......
+         try:
+             await user.send(thankuser)
 # thank the voting user
-         await message.channel.send(embed=embed)
+         except:
+             print("cannot send to this user")
          return
 try:
     client.run(TOKEN)
